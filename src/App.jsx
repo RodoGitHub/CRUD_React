@@ -4,6 +4,8 @@ import './App.css'
 function App() {
   const [buscaObjetos, setBuscaObjetos] = useState(false)
   const [objetosGuardados, setObjetosGuardados] = useState([])
+  const [modoEdicion, setModoEdicion] = useState(false)
+  const [idEditando, setIdEditando] = useState(null)
   const [form, setForm] = useState({
     name: '',
     data: {
@@ -70,9 +72,36 @@ function App() {
     }
   }
 
+  const putForm = async () => {
+    const response = await fetch(`https://api.restful-api.dev/objects/${idEditando}`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(form)
+    })
+
+    if (response.ok) {
+      const data = await response.json()
+      const listaActualizada = objetosGuardados.map(obj =>
+        obj.id === idEditando ? data : obj
+      )
+      setObjetosGuardados(listaActualizada)
+      guardarLS(listaActualizada)
+      alert('Objeto actualizado correctamente')
+      cancelarEdicion()
+    } else {
+      alert('Error al actualizar')
+    }
+  }
+
   const handleSubmit = async (e) => {
     e.preventDefault()
-    await postForm()
+    if (modoEdicion) {
+      await putForm()
+    } else {
+      await postForm()
+    }
   }
 
   const eliminarObjeto = async (id) => {
@@ -96,6 +125,28 @@ function App() {
     eliminarObjeto(id)
   }
 
+  const activarEdicion = (objeto) => {
+    setModoEdicion(true)
+    setIdEditando(objeto.id)
+    setForm({
+      name: objeto.name || '',
+      data: {
+        features: objeto.data?.features || '',
+        price: objeto.data?.price || 0,
+        year: objeto.data?.year || 0
+      }
+    })
+  }
+
+  const cancelarEdicion = () => {
+    setModoEdicion(false)
+    setIdEditando(null)
+    setForm({
+      name: '',
+      data: { features: '', price: 0, year: 0 }
+    })
+  }
+
   useEffect(() => {
     const obtenerYLeer = async () => {
       if (buscaObjetos) {
@@ -117,7 +168,7 @@ function App() {
         <thead>
           <tr>
             <th>Nombre</th>
-            <th>Eliminar</th>
+            <th>Acciones</th>
           </tr>
         </thead>
         <tbody>
@@ -126,6 +177,7 @@ function App() {
               <td>{objeto.name}</td>
               <td>
                 <button onClick={() => handleDelete(objeto.id)}>Eliminar</button>
+                <button onClick={() => activarEdicion(objeto)}>Editar</button>
               </td>
             </tr>
           ))}
@@ -185,6 +237,12 @@ function App() {
           <div className="form-buttons">
             <button type="submit">Guardar</button>
           </div>
+
+          {modoEdicion && (
+            <div className="form-buttons">
+              <button type="button" onClick={cancelarEdicion}>Cancelar</button>
+            </div>
+          )}
         </form>
       </div>
     </div>
@@ -192,4 +250,3 @@ function App() {
 }
 
 export default App
-
